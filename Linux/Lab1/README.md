@@ -29,4 +29,4 @@ sudo -i -u MariamWafik
 sudo apt-get install nginx
 ```
 # 🙏 Thank You
-Thank you for using this project. Your support and feedback are greatly appreciated
+Thank you for using this script. Your feedback and support mean a lot to us.
