@@ -248,5 +248,5 @@ SHOW DATABASES;
 +--------------------+
 ```
 # 🙏 Thank You
-
+Thank you for using this script. Your feedback and support mean a lot to us
 
