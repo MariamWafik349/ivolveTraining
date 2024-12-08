@@ -1,0 +1,41 @@
+---
+- name: MySQL Setup and Database Configuration
+  hosts: dbservers
+  become: true
+  vars_files:
+    - secrets.yml  # Include the encrypted file
+  tasks:
+    - name: Install MySQL
+      apt:
+        name: mysql-server
+        state: present
+
+    - name: Ensure MySQL is running
+      service:
+        name: mysql
+        state: started
+        enabled: true
+
+    - name: Set MySQL root password
+      mysql_user:
+        name: root
+        host: localhost
+        password: "{{ db_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Create the ivolve database
+      mysql_db:
+        name: ivolve
+        state: present
+        login_user: root
+        login_password: "{{ db_root_password }}"
+
+    - name: Create a new MySQL user
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_user_password }}"
+        priv: "ivolve.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ db_root_password }}"
