@@ -17,7 +17,7 @@ ansible-galaxy collection install amazon.aws
 #### 2- Configure the ansible.cfg File Ensure your ansible.cfg file points to the dynamic inventory script
 ```
 [defaults]
-inventory = ./dynamic_inventory.yml
+inventory = ./aws_ec2.yml 
 ```
 #### 3- Create a Dynamic Inventory Script Create a dynamic_inventory.yml file:
 ```
