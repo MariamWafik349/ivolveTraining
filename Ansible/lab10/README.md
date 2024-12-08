@@ -1,90 +1,206 @@
-# Lab 8: Ansible Playbooks for Web Server Configuration Write an Ansible playbook to automate the configuration of a web server.
-## Overview: Ansible Playbook for Web Server Configuration
-An Ansible playbook automates the setup of a web server, ensuring consistency, efficiency, and scalability across multiple systems.
-### Steps in the Playbook
-1- Define Inventory: List target servers and connection details.
-2- Update System: Update and upgrade system packages (apt).
-3- Install Web Server: Install Apache or Nginx.
-4- Enable Service: Start the web server and enable it on boot (service).
-5- Deploy Content: Copy index.html to /var/www/html using the copy module.
-6- Open Firewall Port: Allow HTTP traffic on port 80 (ufw).
-## Step 1: Prepare the Environment
-### 1- Install Ansible on your control node if not already installed:
+# Lab 10: Organize Ansible playbooks using roles. Create an Ansible role for installing Jenkins, docker, openshift CLI ‘OC’.
+## Overview
+Ansible roles structure and organize playbooks into reusable components. In this lab, we create an Ansible role to install Jenkins, Docker, and OpenShift CLI (oc). This improves modularity, scalability, and maintainability.
+## Prerequisites for Lab 10
+### 1- Ansible Setup:
+- Install Ansible 2.9+ on the control node.
+- Ensure SSH access to target hosts with sudo privileges.
+### 2- Target Hosts:
+- OS: Ubuntu 20.04/22.04 or CentOS/RHEL 7/8.
+- Python 3 installed and accessible.
+### 3- Inventory File:
+- Define target hosts in an inventory.ini file with correct SSH credentials.
+### 4- Dependencies:
+- Tools: curl, wget, tar.
+- Ensure package managers (apt or yum) are working.
+### 5- Network & Firewall:
+- Internet access for downloading packages.
+- Open necessary ports (e.g., Jenkins on 8080).
+### 6- Optional:
+- Disk space and prerequisites for OpenShift CLI.
+## Step-by-Step Guide
+### Step 1 : Create a Project Directory
+Organize your playbook and roles:
 ```
-sudo apt update && sudo apt install ansible -y
+mkdir ansible-roles-lab
+cd ansible-roles-lab
+ansible-galaxy init jenkins_docker_oc
 ```
-### 2- Set Up Inventory File: Create an inventory file (hosts) to define the target servers:
+- This creates a directory structure for the jenkins_docker_oc role:
 ```
-[webservers]
-server1 ansible_host=192.168.1.10 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa
-server2 ansible_host=192.168.1.11 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa
+jenkins_docker_oc/
+├── defaults/
+│   └── main.yml
+├── files/
+├── handlers/
+│   └── main.yml
+├── meta/
+│   └── main.yml
+├── tasks/
+│   └── main.yml
+├── templates/
+├── tests/
+│   ├── inventory
+│   └── test.yml
+└── vars/
+    └── main.yml
 ```
-## Step 2: Define the Playbook
-### 1- Create a YAML File: Create a playbook file (web_server.yml)
-### 2- Write the Playbook:
+## Step 2 : Define the Tasks 
+### Edit tasks/main.yml to define the installation steps for Jenkins, Docker, and OpenShift CLI:
 ```
 ---
-- name: Configure Web Server
-  hosts: webservers
-  become: true  # Elevates privileges to root for necessary tasks
-  tasks:
-    - name: Update and upgrade system packages
-      apt:
-        update_cache: yes
-        upgrade: dist
-    
-    - name: Install Apache (or Nginx)
-      apt:
-        name: apache2
-        state: present
+# tasks/main.yml
 
-    - name: Ensure Apache is started and enabled
-      service:
-        name: apache2
-        state: started
-        enabled: true
+- name: Install prerequisites
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
 
-    - name: Deploy custom index.html
-      copy:
-        src: /path/to/index.html
-        dest: /var/www/html/index.html
-        owner: www-data
-        group: www-data
-        mode: '0644'
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
 
-    - name: Open HTTP port in the firewall
-      ufw:
-        rule: allow
-        port: 80
-        proto: tcp
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: Install Docker
+  apt:
+    name: docker-ce
+    state: present
+
+- name: Start Docker service
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add Jenkins GPG key
+  apt_key:
+    url: https://pkg.jenkins.io/debian/jenkins.io.key
+    state: present
+
+- name: Add Jenkins repository
+  apt_repository:
+    repo: "deb https://pkg.jenkins.io/debian binary/"
+    state: present
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: true
+
+- name: Download OpenShift CLI
+  get_url:
+    url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
+    dest: /tmp/openshift-client-linux.tar.gz
+
+- name: Extract OpenShift CLI
+  unarchive:
+    src: /tmp/openshift-client-linux.tar.gz
+    dest: /usr/local/bin
+    remote_src: yes
 ```
-## Step 3: Prepare the Files
-### 1- Create the index.html file with your desired content:
+## Step 3 : Define Variables 
+### Customize installation paths or versions in defaults/main.yml:
 ```
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Welcome to My Web Server</title>
-</head>
-<body>
-    <h1>It works!</h1>
-</body>
-</html>
+docker_version: "20.10.8"
+jenkins_version: "latest"
+oc_url: "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz"
 ```
-### 2- Save this file
-## Step 4: Test the Playbook
-### 1- Run the playbook in check mode to simulate changes
+## Step 4 : Create a Playbook to Call the Role
+### Create install.yml in the root directory:
 ```
-ansible-playbook web_server.yml --check
+---
+- name: Install Jenkins, Docker, and OpenShift CLI
+  hosts: all
+  become: true
+  roles:
+    - jenkins_docker_oc
 ```
-## Step 5: Execute the Playbook
-### Run the playbook to apply the configuration:
+## Step 5 : Run the Playbook
+### 1- Check the playbook
 ```
-ansible-playbook web_server.yml
+ansible-playbook install.yml --check
 ```
-### Step 6: Verify Configuration
-1- Access the web server via a browser using its IP address
-2- Confirm the index.html file is displayed.
+### 2- Execute the playbook 
+```
+ansible-playbook install.yml
+```
+## Expected Output
+### During Execution:
+```
+PLAY [Install Jenkins, Docker, and OpenShift CLI] *******************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [host1]
+
+TASK [jenkins_docker_oc : Install prerequisites] *******************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Add Docker GPG key] **********************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Add Docker repository] *******************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Install Docker] **************************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Start Docker service] ********************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Add Jenkins GPG key] *********************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Add Jenkins repository] ******************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Install Jenkins] *************************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Start Jenkins service] *******************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Download OpenShift CLI] ******************************
+changed: [host1]
+
+TASK [jenkins_docker_oc : Extract OpenShift CLI] *******************************
+changed: [host1]
+
+PLAY RECAP *********************************************************************
+host1                      : ok=12   changed=10   unreachable=0    failed=0
+```
+# Validation
+### 1- Check Jenkins status :
+```
+systemctl status jenkins
+```
+### 2- Verify Docker installation :
+```
+docker --version
+```
+### 3- Check OpenShift CLI (oc) version:
+```
+oc version
+```
+# Summary
+### - Role: Modular structure organizes the configuration for Jenkins, Docker, and OpenShift CLI.
+### - Efficiency: Simplifies task reuse and enhances maintainability.
+### - Scalability: Adapts easily for new hosts or components.
 # 🙏 Thank You
-
-
+Thank you for using this script. Your feedback and support mean a lot to us
