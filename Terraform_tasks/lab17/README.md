@@ -284,3 +284,4 @@ terraform {
 mysql -h <rds-endpoint> -u your_username -p
 ```
 # 🙏 Thank You
+Thank you for using this script. Your feedback and support mean a lot to us
