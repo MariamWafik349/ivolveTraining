@@ -1,0 +1,7 @@
+region      = "us-east-1"
+db_password = "123456789"
+instance_type      = "t2.micro"
+db_instance_class  = "db.t3.micro"
+environment        = "dev"
+public_subnet_cidr = "10.0.1.0/24"
+private_subnet_cidr = "10.0.2.0/24"
