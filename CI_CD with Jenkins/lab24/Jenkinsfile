@@ -1,0 +1,61 @@
+@Library('my-shared-library@main') _  // Load the shared library
+
+pipeline {
+    agent any
+    environment {
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
+        IMAGE_NAME = "mariamwafik333/fullstackspringbootangular_2"
+        IMAGE_TAG = "latest"
+        REGISTRY = "docker.io"
+        DEPLOYMENT_FILE = "deployment.yaml"
+        K8S_TOKEN = credentials('k8s-token') // Token for Kubernetes authentication
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: ''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dockerBuild('Dockerfile', IMAGE_NAME, IMAGE_TAG, REGISTRY, DOCKER_HUB_CREDENTIALS_USR, DOCKER_HUB_CREDENTIALS_PSW)
+                }
+            }
+        }
+
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                script {
+                    dockerPush(IMAGE_NAME, IMAGE_TAG, REGISTRY, DOCKER_HUB_CREDENTIALS_USR, DOCKER_HUB_CREDENTIALS_PSW)
+                }
+            }
+        }
+
+        stage('Update Deployment YAML') {
+            steps {
+                script {
+                    updateYaml(DEPLOYMENT_FILE, REGISTRY, DOCKER_HUB_CREDENTIALS_USR, IMAGE_NAME, IMAGE_TAG)
+                }
+            }
+        }
+
+        stage('Deploy to Minikube') {
+            steps {
+                script {
+                    deployK8s(DEPLOYMENT_FILE)
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                sh 'docker rmi ${REGISTRY}/${DOCKER_HUB_CREDENTIALS_USR}/${IMAGE_NAME}:${IMAGE_TAG}'
+            }
+        }
+    }
+}
