@@ -219,5 +219,27 @@ terraform apply
  3- Outputs will display:
    - Public IPs and private IPs of Nginx servers.
    - Public IPs and private IPs of Apache servers.
+### Changes Made to Align with Your Data
+1- AMI Data Source: Updated to use Amazon Linux 2 (amzn2-ami-hvm-*), as it’s commonly used in AWS labs.
+2- Instance Name: Tagged as "Lab20 EC2 Instance".
+3- Security Group:
+ - Added HTTP (port 80) to support Nginx.
+ - Allowed SSH access (port 22).
+4- Provisioner:
+ - Installs and starts Nginx on Amazon Linux 2.
+ - Ensures the service runs on boot with systemctl enable.
+5- Connection:
+ - Assumes you use ec2-user for Amazon Linux 2.
+ - SSH key path set to ~/.ssh/id_rsa.
+### Assumptions
+ - aws_vpc.lab20_vpc and aws_subnet.public_subnet are defined in your main VPC configuration.
+ - Your key pair (~/.ssh/id_rsa) exists and is associated with the EC2 instance.
+### Summary
+ - This configuration:
+1- Retrieves the Amazon Linux 2 AMI.
+2- Creates an EC2 instance.
+3- Installs Nginx automatically using remote-exec.
+4- Allows SSH and HTTP traffic via a security group.
+5- Outputs the public and private IPs of the instance
 # 🙏 Thank You
-
+Thank you for using this script. Your feedback and support mean a lot to us
